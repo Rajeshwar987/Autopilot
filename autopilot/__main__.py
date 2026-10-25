@@ -78,6 +78,26 @@ def cmd_faults(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reset(args: argparse.Namespace) -> int:
+    """Wipe warehouse tables, the ops store and sandboxes for a clean demo take."""
+    if not args.yes:
+        ui.fail("refusing without --yes (this drops the warehouse tables and the incident store)")
+        return 1
+    from autopilot.warehouse import db, runner
+    conn = db.connect()
+    try:
+        for name in ["bronze_states"] + runner.list_models(("silver", "gold")):
+            conn.execute(f'DROP TABLE IF EXISTS "{name}"')
+    finally:
+        conn.close()
+    for p in [config.OPS_DB, Path(str(config.OPS_DB) + ".wal")] + list(config.SANDBOX_DIR.glob("*")):
+        if p.exists():
+            p.unlink()
+    ui.ok(f"warehouse {config.warehouse_url() if not db.is_motherduck() else 'MotherDuck'} tables dropped; ops store and sandboxes removed")
+    ui.info("if a fix was applied to a model file, restore it with: git checkout -- autopilot/models/silver")
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     p = config.REPORTS_DIR / f"{args.incident_id}.md"
     if not p.exists():
@@ -105,6 +125,9 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_incident)
     sub.add_parser("incidents", help="list incidents").set_defaults(fn=cmd_incidents)
     sub.add_parser("faults", help="list chaos faults").set_defaults(fn=cmd_faults)
+    p = sub.add_parser("reset", help="drop warehouse tables, ops store and sandboxes (clean demo state)")
+    p.add_argument("--yes", action="store_true")
+    p.set_defaults(fn=cmd_reset)
     p = sub.add_parser("report", help="print an incident report")
     p.add_argument("incident_id")
     p.set_defaults(fn=cmd_report)

@@ -75,7 +75,7 @@ Repo: <github link>. Honest version of the pitch: OpenSky's schema is stable, so
 
 ## 75-second recording script (PowerShell, dark theme, font 18+, window ~110 cols)
 
-Prep: `py -m autopilot run --replay data/raw/states_<t>.json --no-agent` once so there is a baseline; clear the screen.
+Prep: `py -m autopilot reset --yes` (clean warehouse + incident store; restore the model with `git checkout -- autopilot/models/silver` if a previous take applied a fix), then `py -m autopilot run --replay data/raw/states_<t>.json --no-agent` once so there is a baseline; clear the screen.
 
 | t | action | what the viewer sees |
 |---|---|---|

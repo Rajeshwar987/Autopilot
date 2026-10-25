@@ -61,6 +61,7 @@ py -m autopilot run --replay data/raw/states_<t>.json --chaos drop_field_sensors
 py -m autopilot loop --interval 60               # keep ingesting
 py -m autopilot incidents ; py -m autopilot report INC-0001
 py -m autopilot faults                           # list chaos faults
+py -m autopilot reset --yes                      # drop warehouse tables + incident store for a clean take
 python -m pytest -q                              # 37 tests: guardrails, every fault is caught, check engine
 ```
 

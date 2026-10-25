@@ -35,11 +35,18 @@ def run_once(store: Store, chaos: str | None = None, replay: Path | None = None)
     run_id = new_run_id()
     ui.banner(f"Autopilot run {run_id}")
 
+    prev = store.recent_ingest_runs(1)
+    previous_snapshot_time = prev[0]["snapshot_time"] if prev else None
+
     # 1. fetch or replay
     source = "opensky"
     if replay:
         payload = opensky.load_raw(replay)
-        payload["time"] = int(time.time()) // 10 * 10  # replayed snapshots get a fresh clock
+        # replayed snapshots get a fresh clock, guaranteed to advance past the previous run
+        fresh = int(time.time()) // 10 * 10
+        if previous_snapshot_time is not None and previous_snapshot_time < 2_000_000_000:  # ignore ms-faulted runs
+            fresh = max(fresh, int(previous_snapshot_time) + 10)
+        payload["time"] = fresh
         source = "replay"
         ui.info(f"replaying {Path(replay).name} ({len(payload['states'])} aircraft)")
     else:
@@ -61,8 +68,6 @@ def run_once(store: Store, chaos: str | None = None, replay: Path | None = None)
     snap = opensky.save_raw(payload, chaos_fault=chaos, source=source)
 
     # 3. load + models
-    prev = store.recent_ingest_runs(1)
-    previous_snapshot_time = prev[0]["snapshot_time"] if prev else None
     conn = db.connect()
     try:
         runner.run_models(conn, ("bronze",))
