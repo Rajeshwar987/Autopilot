@@ -1,0 +1,123 @@
+# Data-quality checks. Each compiles to one SQL statement scoped to the current ingest run
+# (WHERE run_id = ?) so agents can see the exact SQL that failed.
+#
+# types: not_null (max_null_pct) | range (min,max, max_failed_pct) | unique (columns) | row_count_min (min)
+#        freshness (max_age_seconds) | accepted_values (values) | expression (expression)
+
+- name: row_count_min
+  table: silver_flights
+  type: row_count_min
+  min: 200
+  severity: high
+  description: A Europe-sized bbox always yields hundreds of aircraft; fewer means the fetch broke.
+
+- name: freshness
+  table: silver_flights
+  type: freshness
+  max_age_seconds: 900
+  severity: high
+  description: snapshot_time must be within 15 min of now and strictly after the previous run's snapshot.
+
+- name: unique_icao24_per_snapshot
+  table: silver_flights
+  type: unique
+  columns: [icao24, snapshot_time]
+  severity: high
+  description: One state vector per aircraft per snapshot.
+
+- name: icao24_not_null
+  table: silver_flights
+  type: not_null
+  column: icao24
+  max_null_pct: 0
+  severity: high
+
+- name: latitude_in_range
+  table: silver_flights
+  type: range
+  column: latitude
+  min: -90
+  max: 90
+  severity: high
+
+- name: longitude_in_range
+  table: silver_flights
+  type: range
+  column: longitude
+  min: -180
+  max: 180
+  severity: high
+
+- name: position_null_rate
+  table: silver_flights
+  type: not_null
+  column: latitude
+  max_null_pct: 40
+  severity: medium
+  description: Baseline null rate for positions is ~10-15%.
+
+- name: on_ground_is_boolean
+  table: silver_flights
+  type: not_null
+  column: on_ground
+  max_null_pct: 1
+  severity: high
+  description: TRY_CAST to BOOLEAN failing (NULL) means a non-boolean landed in this position.
+
+- name: velocity_in_range
+  table: silver_flights
+  type: range
+  column: velocity
+  min: 0
+  max: 350
+  max_failed_pct: 1
+  severity: high
+  description: Ground speed in m/s; airliners cruise ~200-260 m/s. Values above 350 indicate a unit problem.
+
+- name: baro_altitude_in_range
+  table: silver_flights
+  type: range
+  column: baro_altitude
+  min: -500
+  max: 20000
+  max_failed_pct: 1
+  severity: medium
+
+- name: last_contact_plausible_epoch
+  table: silver_flights
+  type: range
+  column: last_contact
+  min: 1600000000
+  max: 2000000000
+  severity: high
+  description: Unix seconds between 2020 and 2033; milliseconds would be ~1.7e12.
+
+- name: position_source_accepted
+  table: silver_flights
+  type: accepted_values
+  column: position_source
+  values: [0, 1, 2, 3]
+  severity: medium
+
+- name: airborne_have_velocity
+  table: silver_flights
+  type: expression
+  expression: "NOT (on_ground = false AND velocity IS NULL AND latitude IS NOT NULL)"
+  max_failed_pct: 5
+  severity: low
+
+- name: category_present
+  table: silver_flights
+  type: not_null
+  column: category
+  max_null_pct: 5
+  severity: high
+  description: category is the 18th (last) positional field; it goes NULL when a field is dropped upstream and the vector shrinks.
+
+- name: squawk_format
+  table: silver_flights
+  type: expression
+  expression: "squawk IS NULL OR regexp_matches(squawk, '^[0-7]{4}$')"
+  max_failed_pct: 1
+  severity: medium
+  description: Transponder squawk codes are four octal digits.
