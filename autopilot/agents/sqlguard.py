@@ -143,7 +143,7 @@ def format_rows(cur, max_rows: int = 50) -> str:
 def run_readonly(conn: duckdb.DuckDBPyConnection, sql: str, limit: int = 50, timeout_s: float = 10.0) -> str:
     s = validate_readonly(sql)
     if first_keyword(s) in {"SELECT", "WITH", "FROM"}:
-        s = f"SELECT * FROM ({s}) AS _q LIMIT {int(limit)}"
+        s = f"SELECT * FROM ({s}) AS _q LIMIT {int(limit) + 1}"  # +1 so the cap is visible to the agent
     cur = execute_with_timeout(conn, s, timeout_s)
     return cap(format_rows(cur, limit))
 

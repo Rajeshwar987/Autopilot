@@ -45,8 +45,11 @@ def profile_positions(conn: duckdb.DuckDBPyConnection, run_id: str | None = None
         e = f"state[{i}]"
         r = conn.execute(f"""
             SELECT count({e}) AS non_null,
-                   count(*) FILTER (WHERE TRY_CAST({e} AS BIGINT) IS NOT NULL) AS ok_bigint,
-                   count(*) FILTER (WHERE TRY_CAST({e} AS DOUBLE) IS NOT NULL) AS ok_double,
+                   -- DuckDB rounds '14.2' -> 14 on TRY_CAST to BIGINT, so require an integer-valued double
+                   count(*) FILTER (WHERE TRY_CAST({e} AS DOUBLE) IS NOT NULL
+                                      AND TRY_CAST({e} AS DOUBLE) = floor(TRY_CAST({e} AS DOUBLE))
+                                      AND NOT contains({e}, '.')) AS ok_bigint,
+                   count(*) FILTER (WHERE TRY_CAST({e} AS DOUBLE) IS NOT NULL AND NOT regexp_matches({e}, '^[0-9a-fA-F]*[a-fA-F][0-9a-fA-F]*$')) AS ok_double,
                    count(*) FILTER (WHERE TRY_CAST({e} AS BOOLEAN) IS NOT NULL) AS ok_bool,
                    count(DISTINCT {e}) AS distinct_values,
                    min(TRY_CAST({e} AS DOUBLE)) AS min_num,
@@ -57,6 +60,8 @@ def profile_positions(conn: duckdb.DuckDBPyConnection, run_id: str | None = None
         """).fetchone()
         non_null, ok_bigint, ok_double, ok_bool, distinct, mn, med, mx, example = r
         inferred = infer_type(non_null, ok_bigint, ok_double, ok_bool)
+        if inferred in ("varchar", "boolean", "null"):
+            mn = med = mx = None  # numeric stats are noise for non-numeric positions (hex ids parse as 4e39...)
         positions[i] = {
             "position": i,
             "expected_field": config.STATE_FIELDS[i - 1] if i - 1 < len(config.STATE_FIELDS) else None,

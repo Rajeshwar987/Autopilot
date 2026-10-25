@@ -69,14 +69,16 @@ def build_tools(ctx: RemediationContext) -> list[Tool]:
         if model_name not in runner.list_models(("silver",)):
             return f"ERROR: only silver models may be changed: {runner.list_models(('silver',))}"
         try:
-            new_sql = sqlguard.validate_model_sql(new_model_sql, model_name)
+            sqlguard.validate_model_sql(new_model_sql, model_name)  # validates the comment-stripped form
             if backfill_sql.strip():
                 sqlguard.validate_backfill(backfill_sql)
         except sqlguard.SQLGuardError as e:
             return f"ERROR: {e}"
+        # store the agent's text as written (header comments included), normalised to one trailing ';'
+        new_sql = new_model_sql.strip().rstrip(";").rstrip() + ";"
         old_sql = runner.read_model_sql(model_name)
-        pid = ctx.store.save_proposal(ctx.incident_id, model_name, old_sql, new_sql + ";", backfill_sql, rollback_sql, rationale)
-        diff = _diff(old_sql, new_sql + ";", model_name)
+        pid = ctx.store.save_proposal(ctx.incident_id, model_name, old_sql, new_sql, backfill_sql, rollback_sql, rationale)
+        diff = _diff(old_sql, new_sql, model_name)
         ui.diff(diff, title=f"{pid}: proposed change to {model_name}")
         return f"proposal_id={pid}\n{diff}"
 
