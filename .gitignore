@@ -7,3 +7,5 @@ sandbox/
 *.duckdb
 *.duckdb.wal
 .pytest_cache/
+# Claude Code conversation exports
+*-local-command-*.txt
