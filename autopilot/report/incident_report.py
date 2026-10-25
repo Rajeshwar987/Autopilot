@@ -45,7 +45,10 @@ def write(store: Store, incident_id: str, narrative_md: str) -> Path:
            f"- **Run:** `{inc.get('run_id')}` snapshot_time={run.get('snapshot_time')} rows={run.get('row_count')} source={run.get('source')}  ",
            f"- **Failing checks:** {', '.join(_j(inc.get('failing_checks')) or [])}  ",
            f"- **Status:** {inc.get('status')}", ""]
-    md += ["## Summary (written by the remediation agent)", "", narrative_md.strip(), ""]
+    narrative = narrative_md.strip()
+    if narrative.startswith("#"):  # agent supplied its own headings - demote them under ours
+        narrative = "\n".join(("#" + ln) if ln.startswith("#") else ln for ln in narrative.splitlines())
+    md += ["## Summary (written by the remediation agent)", "", narrative, ""]
 
     if diag:
         md += ["## Diagnosis (diagnosis agent)", "",
