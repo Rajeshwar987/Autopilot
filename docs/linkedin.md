@@ -69,7 +69,7 @@ If your agent demo never shows it declining, you haven't shown me it's safe.
 
 ## Comment to post under Post 1
 
-Repo: <github link>. Honest version of the pitch: OpenSky's schema is stable, so I built a chaos module that injects seven kinds of realistic upstream faults (unit change, dropped field, inserted field, ms timestamps, null flood, duplicates, stale feed). The CLI prints a red CHAOS banner, the label is stored in a column no agent tool can read, and every report discloses it.
+Repo: https://github.com/Rajeshwar987/Autopilot. Honest version of the pitch: OpenSky's schema is stable, so I built a chaos module that injects seven kinds of realistic upstream faults (unit change, dropped field, inserted field, ms timestamps, null flood, duplicates, stale feed). The CLI prints a red CHAOS banner, the label is stored in a column no agent tool can read, and every report discloses it.
 
 ---
 
