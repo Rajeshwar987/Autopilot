@@ -71,7 +71,7 @@ the same SQL runs unchanged against the local file or the cloud.
 
 The agents talk to any OpenAI-compatible chat-completions endpoint through a ~150-line loop
 (`autopilot/agents/llm.py`): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`. It was built on Alibaba Model
-Studio's Coding Plan with `qwen3.7-plus`; point it at OpenAI, OpenRouter, Groq, vLLM or Ollama by
+Studio's token plan with `qwen3.7-plus`; point it at OpenAI, OpenRouter, Groq, vLLM or Ollama by
 changing three environment variables. Token usage per agent run is recorded in `ops.duckdb` and
 printed in every incident report.
 

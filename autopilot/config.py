@@ -22,7 +22,7 @@ for _d in (DATA_RAW, SANDBOX_DIR, REPORTS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 # ---- LLM (any OpenAI-compatible endpoint) ----
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://coding-intl.dashscope.aliyuncs.com/v1")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1")
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.7-plus")
 
