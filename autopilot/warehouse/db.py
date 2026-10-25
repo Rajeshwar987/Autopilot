@@ -14,7 +14,17 @@ def connect(target: str | Path | None = None, read_only: bool = False) -> duckdb
     if target is None:
         target = config.warehouse_url()
     if isinstance(target, str) and target.startswith("md:"):
-        return duckdb.connect(target, read_only=read_only)
+        try:
+            return duckdb.connect(target, read_only=read_only)
+        except duckdb.Error as e:
+            if "no database/share named" not in str(e):
+                raise
+            # md:<name>?... -> create the database once, then reconnect
+            name, _, params = target[3:].partition("?")
+            root = duckdb.connect("md:" + ("?" + params if params else ""))
+            root.execute(f'CREATE DATABASE IF NOT EXISTS "{name}"')
+            root.close()
+            return duckdb.connect(target, read_only=read_only)
     return duckdb.connect(Path(target).as_posix(), read_only=read_only)
 
 
@@ -26,16 +36,24 @@ def load_bronze(conn: duckdb.DuckDBPyConnection, run_id: str, payload: dict) -> 
     """Insert one raw snapshot into bronze_states, stringifying every element (NULL preserved).
     Never fails on shape changes: 16, 17 or 19 fields all load."""
     snapshot_time = int(payload["time"])
-    rows = []
-    for state in payload.get("states") or []:
-        elems = [None if v is None else (v if isinstance(v, str) else json.dumps(v)) for v in state]
-        rows.append((run_id, snapshot_time, elems))
-    if rows:
-        conn.executemany(
-            "INSERT INTO bronze_states (run_id, snapshot_time, ingested_at, state) VALUES (?, ?, now(), ?)",
-            rows,
+
+    def lit(v) -> str:  # SQL literal for one list element
+        if v is None:
+            return "NULL"
+        s = v if isinstance(v, str) else json.dumps(v)
+        return "'" + s.replace("'", "''") + "'"
+
+    states = payload.get("states") or []
+    prefix = f"INSERT INTO bronze_states (run_id, snapshot_time, ingested_at, state) VALUES "
+    # multi-row VALUES in batches: one round trip per 1000 aircraft instead of one per row
+    # (executemany = ~7 minutes per snapshot against MotherDuck)
+    for i in range(0, len(states), 1000):
+        values = ",".join(
+            f"('{run_id}', {snapshot_time}, now(), [{','.join(lit(v) for v in state)}]::VARCHAR[])"
+            for state in states[i:i + 1000]
         )
-    return len(rows)
+        conn.execute(prefix + values)
+    return len(states)
 
 
 def sandbox_path(incident_id: str) -> Path:

@@ -1,4 +1,4 @@
-duckdb==2.0.0
+duckdb==1.5.6  # MotherDuck supports up to 1.5.6 (2.0.0 not yet, as of Oct 2026)
 openai>=1.50
 pydantic>=2.7
 pyyaml>=6.0

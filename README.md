@@ -65,7 +65,9 @@ python -m pytest -q                              # 37 tests: guardrails, every f
 ```
 
 Set `WAREHOUSE_URL=md:autopilot?motherduck_token=…` to run prod on [MotherDuck](https://motherduck.com);
-the same SQL runs unchanged against the local file or the cloud.
+the same SQL runs unchanged against the local file or the cloud, and the database is created on first
+connect. DuckDB is pinned to 1.5.6 because MotherDuck's extension does not support 2.0.0 yet (Oct 2026).
+Bronze loads use batched multi-row INSERTs - one round trip per 1,000 aircraft, not one per row.
 
 ## Runs on any model
 
