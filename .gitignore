@@ -9,3 +9,5 @@ sandbox/
 .pytest_cache/
 # Claude Code conversation exports
 *-local-command-*.txt
+# local-only material (user guide PDF etc.) - never committed
+local/
